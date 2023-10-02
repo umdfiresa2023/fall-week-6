@@ -1,0 +1,178 @@
+---
+title: "2023 FIRE298 Week 6 Exercise"
+format: html
+editor: visual
+---
+
+## Installing a required package
+
+```{r}
+
+#| warning: false
+#| message: false
+
+install.packages("terra")
+library("terra")
+```
+
+## Opening a shapefile and mapping it
+
+```{r}
+#| warning: false
+
+n<-vect("DATA/Neighborhood/Neighborhood.shp")
+
+plot(n)
+```
+
+## Activity 2: Map roads in Maryland
+
+Try opening and plotting roads in Maryland. The roads shapefile is in the DATA/roads/ folder
+
+```{r}
+
+```
+
+## Mapping two shapefiles together
+
+Add lines(object) or points(object) after plot(object)
+
+```{r}
+plot(roads)
+lines(n)
+```
+
+## Checking each object's coordinate reference system
+
+```{r}
+crs(n)
+crs(roads)
+```
+
+## Changing each object's coordinate reference system
+
+Use the project(object, "crs system") function to change an object's crs
+
+```{r}
+#n already has an existing coordinate system
+n_project<-project(n, "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs ")
+```
+
+Use crs(object)\<-"crs system" to define a crs for objects that do not have an existing crs sytem
+
+```{r}
+crs(roads)<-"+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs "
+```
+
+```{r}
+plot(n_project)
+lines(roads, col="red")
+```
+
+## Manipulating shapefiles: Mapping only specific parts
+
+I would like to map only interstates, not all roads in Maryland.
+
+First, I need to view the dataframe attached to the object, and identify which column indicates road type
+
+```{r}
+roads
+```
+
+## Manipulating shapefiles: Selecting only specific parts
+
+We need to install the tidyterra package. The package allows us to use tidyverse commands with shapefiles.
+
+```{r}
+#| warning: false
+#| message: false
+
+install.packages("tidyterra")
+library("tidyterra")
+
+i<-roads %>%
+  filter(RTTYP=="I")
+
+plot(i)
+```
+
+## Manipulating shapefiles: Turning dataframes into points
+
+Open a dataset and manipulate the data into the one that we would like to map.
+
+For example, the script below only filters for auto thefts in 2014.
+
+```{r}
+crime<-read.csv("DATA/crime_14_22.csv") %>%
+  filter(year==2014) %>%
+  filter(Description=="AUTO THEFT") %>%
+  filter(X<0 & Y>0)
+
+```
+
+Use the vect(dataframe) function to turn it into a shapefile
+
+```{r}
+c_points<-vect(crime, 
+               geom=c("X", "Y"), #identify the X and Y columns
+               crs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs ")
+
+plot(c_points)
+```
+
+## Activity 3: Map an auto theft incident that happened on the date 2014-07-05
+
+. . .
+
+```{r}
+
+```
+
+## Rasters
+
+A raster consists of a matrix of cells (or pixels) organized into rows and columns (or a grid) where each cell contains a value representing information, such as temperature.
+
+You can upload raster files into the environment with the rast() function
+
+```{r}
+r<-rast("DATA/20140101.nc4.nc4")
+```
+
+To learn more about the raster, type its object name in the console.
+
+```{r}
+r
+```
+
+## Rasters
+
+To learn more about the variables that it contains, type names(rasterobject) in the console.
+
+```{r}
+names(r)
+```
+
+## Mapping Rasters
+
+In order to visualize rasters, you have to choose a specific layer to map.
+
+For example, I woud like to map temperature levels at midnight, so I choose the 25th layer of r.
+
+```{r}
+temp<-r[[25]]
+
+plot(temp)
+lines(n_project)
+```
+
+## Extracting Raster Data
+
+To get the value of each pixel, you can use the extract() function to find raster attributes within each shape file.
+
+For example
+
+```{r}
+r_b<-terra::extract(temp, n_project, fun=mean)
+
+df<-cbind(r_b, n$Name)
+```
